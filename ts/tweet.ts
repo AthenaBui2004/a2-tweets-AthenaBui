@@ -1,21 +1,39 @@
 class Tweet {
-	private text:string;
-	time:Date;
+    private text:string;
+    time:Date;
 
-	constructor(tweet_text:string, tweet_time:string) {
+    constructor(tweet_text:string, tweet_time:string) {
         this.text = tweet_text;
-		this.time = new Date(tweet_time);//, "ddd MMM D HH:mm:ss Z YYYY"
-	}
+        this.time = new Date(tweet_time);//, "ddd MMM D HH:mm:ss Z YYYY"
+    }
 
-	//returns either 'live_event', 'achievement', 'completed_event', or 'miscellaneous'
+    //returns either 'live_event', 'achievement', 'completed_event', or 'miscellaneous'
     get source():string {
-        //TODO: identify whether the source is a live event, an achievement, a completed event, or miscellaneous.
-        return "unknown";
+        if (this.text.includes("Just completed") || this.text.includes("Just posted")) {
+            return "completed_event";
+        }
+
+        if (this.text.includes("Watch my")) {
+            return "live_event";
+        }
+
+        if (this.text.includes("Achieved")) {
+            return "achievement";
+        }
+
+        return "miscellaneous";
     }
 
     //returns a boolean, whether the text includes any content written by the person tweeting.
     get written():boolean {
-        //TODO: identify whether the tweet is written
+        if (this.source != 'completed_event') {
+            return false;
+        }
+
+        if (this.text.includes(" - ")) {
+            return true;
+        }
+
         return false;
     }
 
@@ -23,28 +41,85 @@ class Tweet {
         if(!this.written) {
             return "";
         }
-        //TODO: parse the written text from the tweet
-        return "";
+
+        var start = this.text.indexOf(" - ") + 3;
+        var end = this.text.indexOf(" https://", start);
+
+        if (end == -1) {
+            end = this.text.indexOf(" #Runkeeper", start);
+        }
+
+        if (end == -1) {
+            return this.text.substring(start);
+        }
+
+        return this.text.substring(start, end);
     }
 
     get activityType():string {
         if (this.source != 'completed_event') {
             return "unknown";
         }
-        //TODO: parse the activity type from the text of the tweet
-        return "";
+
+        var words = this.text.split(" ");
+
+        for (var i = 0; i < words.length; i++) {
+            if (words[i] == "km" || words[i] == "mi") {
+                return words[i + 1];
+            }
+
+            if (words[i] == "workout") {
+                return words[i - 1];
+            }
+        }
+
+        return "unknown";
     }
 
     get distance():number {
         if(this.source != 'completed_event') {
             return 0;
         }
-        //TODO: prase the distance from the text of the tweet
+
+        var words = this.text.split(" ");
+
+        for (var i = 0; i < words.length; i++) {
+
+            if (words[i] == "km") {
+                var kilometers = Number(words[i - 1]);
+                return kilometers / 1.609;
+            }
+
+            if (words[i] == "mi") {
+                var miles = Number(words[i - 1]);
+                return miles;
+            }
+        }
+
         return 0;
     }
 
     getHTMLTableRow(rowNumber:number):string {
-        //TODO: return a table row which summarizes the tweet with a clickable link to the RunKeeper activity
-        return "<tr></tr>";
+        var linkStart = this.text.indexOf("https://");
+        var linkEnd = this.text.indexOf(" ", linkStart);
+
+        var link = "";
+
+        if (linkStart != -1) {
+            if (linkEnd == -1) {
+                link = this.text.substring(linkStart);
+            }
+            else {
+                link = this.text.substring(linkStart, linkEnd);
+            }
+        }
+
+        return "<tr>" +
+            "<td>" + rowNumber + "</td>" +
+            "<td>" + this.activityType + "</td>" +
+            "<td><a href=\"" + link + "\" target=\"_blank\">" +
+            this.writtenText +
+            "</a></td>" +
+            "</tr>";
     }
 }
